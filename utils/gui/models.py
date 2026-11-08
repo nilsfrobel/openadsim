@@ -394,10 +394,13 @@ class AdditionalOptionsConfig(BaseModel):
         "testing_profile",
         "perception_profile",
         "planning_profile",
+        "record_bag",
     }
 
     use_sim_time: bool = True
     ros_tracing: bool = False
+    record_bag: bool = False
+    auto_stop: bool = False
     rmw: Rmw = Rmw.ZENOH
     simulation: SimulationProfile = SimulationProfile.CARLA
     example_overlay: str = ""
@@ -410,6 +413,11 @@ class AdditionalOptionsConfig(BaseModel):
         self.use_sim_time = True
         self.rmw = Rmw.ZENOH
         self.example_overlay = self.example_overlay.strip()
+        if (
+            self.simulation != SimulationProfile.CARLA
+            or self.testing_profile != TestingProfile.AUTOMATED
+        ):
+            self.auto_stop = False
 
     def _example_prefix(self) -> str:
         example = self.example_overlay.strip()
@@ -430,6 +438,8 @@ class AdditionalOptionsConfig(BaseModel):
                 ]
             )
         parts.extend([self.perception_profile.value, self.planning_profile.value])
+        if self.record_bag:
+            parts.append("bag-recording")
         return ",".join(parts)
 
     @env_export("COMPOSE_FILE")
@@ -465,7 +475,7 @@ class SimulationConfig(BaseModel):
             ],
         ),
         ("### Scenario Configuration", ["SCENARIO_FILE"]),
-        ("### Additional Options", ["USE_SIM_TIME", "ROS_TRACING"]),
+        ("### Additional Options", ["USE_SIM_TIME", "ROS_TRACING", "AUTO_STOP"]),
     ]
     OPTIONAL_EMPTY_ENV_KEYS: ClassVar[set[str]] = {"COMPOSE_FILE"}
 
@@ -772,6 +782,12 @@ class SimulationConfig(BaseModel):
                 planning_profile = PlanningProfile(profile)
                 continue
 
+        record_bag = "bag-recording" in compose_profiles
+        auto_stop = cls._parse_bool(
+            env_vars.get("AUTO_STOP", "false"),
+            default=False,
+        )
+
         additional = AdditionalOptionsConfig(
             use_sim_time=cls._parse_bool(
                 env_vars.get("USE_SIM_TIME", "true"),
@@ -781,6 +797,8 @@ class SimulationConfig(BaseModel):
                 env_vars.get("ROS_TRACING", "false"),
                 default=False,
             ),
+            record_bag=record_bag,
+            auto_stop=auto_stop,
             simulation=simulation,
             example_overlay=cls._infer_example_overlay_from_compose(
                 env_vars.get("COMPOSE_FILE", env_vars.get("COMPOSE_FILES", "")),
@@ -1188,6 +1206,24 @@ class SimulationConfig(BaseModel):
                     label="Enable ROS Tracing",
                     description="Enable tracing for performance analysis.",
                     control="bool",
+                ),
+                UiField(
+                    path="additional.record_bag",
+                    env_name="COMPOSE_PROFILES",
+                    label="Record ROS Bag",
+                    description="Enable bag-recording profile to capture topics in MCAP format.",
+                    control="bool",
+                ),
+                UiField(
+                    path="additional.auto_stop",
+                    env_name="AUTO_STOP",
+                    label="Auto-stop on completion",
+                    description="Automatically shut down simulation via docker compose down when a scenario finishes.",
+                    control="bool",
+                    disabled=(
+                        self.additional.simulation != SimulationProfile.CARLA
+                        or self.additional.testing_profile != TestingProfile.AUTOMATED
+                    ),
                 ),
             ),
         )
