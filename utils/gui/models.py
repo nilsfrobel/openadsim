@@ -1188,9 +1188,9 @@ class SimulationConfig(BaseModel):
             ),
         )
 
-        additional_section = UiSection(
-            title="Additional Options",
-            description="Runtime options.",
+        runtime_section = UiSection(
+            title="Runtime Options",
+            description="System and performance parameters.",
             fields=(
                 UiField(
                     path="additional.use_sim_time",
@@ -1207,6 +1207,13 @@ class SimulationConfig(BaseModel):
                     description="Enable tracing for performance analysis.",
                     control="bool",
                 ),
+            ),
+        )
+
+        recording_section = UiSection(
+            title="Recording Options",
+            description="Bag recording and simulation auto-stop after automated-testing.",
+            fields=(
                 UiField(
                     path="additional.record_bag",
                     env_name="COMPOSE_PROFILES",
@@ -1228,4 +1235,11 @@ class SimulationConfig(BaseModel):
             ),
         )
 
-        return [profiles_section, vehicle_section, map_section, scenario_section, additional_section]
+        return [
+            profiles_section,
+            vehicle_section,
+            map_section,
+            scenario_section,
+            runtime_section,
+            recording_section,
+        ]

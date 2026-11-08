@@ -488,7 +488,7 @@ def _section_icon_svg(title: str) -> str:
     return f'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">{paths}</svg>'
 
 
-def _render_section_heading(title: str, description: str):
+def _render_section_heading(title: str, description: str = ""):
     icon = _section_icon_svg(title)
     if icon:
         description_html = (
@@ -993,12 +993,13 @@ def _render_configuration_tab(config: SimulationConfig):
     active_preset_name = "" if force_current_configuration else match_preset_name(config)
 
     profiles_section = sections.get("Profiles")
-    additional_section = sections.get("Additional Options")
     vehicle_section = sections.get("Vehicle")
     map_section = sections.get("Map")
     scenario_section = sections.get("Scenario")
+    runtime_section = sections.get("Runtime Options")
+    recording_section = sections.get("Recording Options")
 
-    if not all([profiles_section, additional_section, vehicle_section, map_section, scenario_section]):
+    if not all([profiles_section, vehicle_section, map_section, scenario_section, runtime_section, recording_section]):
         for section in sections.values():
             _render_section_heading(section.title, section.description)
             if section.title == "Profiles":
@@ -1050,11 +1051,25 @@ def _render_configuration_tab(config: SimulationConfig):
                 st.caption("Scenario file is only configurable for manual or automated testing.")
 
         st.markdown("---")
-        _render_section_heading(additional_section.title, additional_section.description)
-        changed = False
-        for field in additional_section.fields:
-            changed = render_field(config, field) or changed
-        config_changed = config_changed or changed
+        _render_section_heading("Additional Options")
+
+        col_runtime, col_rec = st.columns(2)
+
+        with col_runtime:
+            if runtime_section.description:
+                st.caption(runtime_section.description)
+            changed = False
+            for field in runtime_section.fields:
+                changed = render_field(config, field) or changed
+            config_changed = config_changed or changed
+
+        with col_rec:
+            if recording_section.description:
+                st.caption(recording_section.description)
+            changed = False
+            for field in recording_section.fields:
+                changed = render_field(config, field) or changed
+            config_changed = config_changed or changed
 
     if active_preset_name:
         st.info(f"Preset '{active_preset_name}' is active. Edit any field to switch back to Current Configuration.")
