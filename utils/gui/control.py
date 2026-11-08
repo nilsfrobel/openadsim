@@ -164,3 +164,19 @@ def resolve_runtime_repo_root(container_repo_root: Path) -> Path:
         return host_repo_root
     except OSError:
         return container_repo_root
+
+
+def get_teardown_commands(record_bag: bool) -> list[list[str]]:
+    """Return teardown commands based on whether a ROS bag is being recorded.
+
+    If record_bag is True, uses graceful shutdown ('docker compose down') to ensure
+    buffers are flushed and metadata.yaml is written.
+    Otherwise, uses fast immediate stop ('docker compose kill' + 'docker compose rm --force').
+    """
+    if record_bag:
+        return [["docker", "compose", "down"]]
+    return [
+        ["docker", "compose", "kill"],
+        ["docker", "compose", "rm", "--force"],
+    ]
+
