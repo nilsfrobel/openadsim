@@ -39,15 +39,24 @@ services:
       file: ../openadstack/utils/compose/docker-compose.template.yml
       service: ros2-service
     image: ghcr.io/openads-project/monitoring:v26.10.20
+    environment:
+      SCENARIO_FILE: ${SCENARIO_FILE:-}
     command:
       - /bin/bash
       - -ic
       - |
         set -e
         ros2 topic echo --once /planning/lanelet2_route_planning/route > /dev/null
+        SCENARIO_NAME="$$(basename "$${SCENARIO_FILE:-manual}" .xosc)"
+        if [ -z "$$SCENARIO_NAME" ] || [ "$$SCENARIO_NAME" = "." ]; then
+          SCENARIO_NAME="manual"
+        fi
+        TARGET_DIR="/tmp/rosbags/$${SCENARIO_NAME}"
+        mkdir -p "$$TARGET_DIR"
+        BAG_NAME="rosbag2_$$(date +%Y_%m_%d-%H_%M_%S)"
         exec ros2 bag record \
           --storage mcap \
-          --output /tmp/rosbags/bag \
+          --output "$$TARGET_DIR/$$BAG_NAME" \
           --topics \
           /rosout \
           /tf \
