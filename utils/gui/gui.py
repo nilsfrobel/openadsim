@@ -304,6 +304,13 @@ div[data-testid="stAlert"] {
     margin: -0.15rem 0 0.7rem 0;
 }
 
+.openads-column-description {
+    color: var(--openads-muted);
+    font-size: 0.86rem;
+    line-height: 1.35;
+    margin: 0;
+}
+
 .openads-profile-label {
     display: flex;
     align-items: center;
@@ -507,6 +514,14 @@ def _render_section_heading(title: str, description: str = ""):
         st.subheader(_section_title(title))
         if description:
             st.caption(description)
+
+
+def _render_column_description(description: str = ""):
+    content = html.escape(description) if description else "&nbsp;"
+    st.markdown(
+        f'<div class="openads-column-description">{content}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def _render_footer():
@@ -1053,19 +1068,21 @@ def _render_configuration_tab(config: SimulationConfig):
         st.markdown("---")
         _render_section_heading("Additional Options")
 
+        col_desc_runtime, col_desc_rec = st.columns(2)
+        with col_desc_runtime:
+            _render_column_description(runtime_section.description)
+        with col_desc_rec:
+            _render_column_description(recording_section.description)
+
         col_runtime, col_rec = st.columns(2)
 
         with col_runtime:
-            if runtime_section.description:
-                st.caption(runtime_section.description)
             changed = False
             for field in runtime_section.fields:
                 changed = render_field(config, field) or changed
             config_changed = config_changed or changed
 
         with col_rec:
-            if recording_section.description:
-                st.caption(recording_section.description)
             changed = False
             for field in recording_section.fields:
                 changed = render_field(config, field) or changed
