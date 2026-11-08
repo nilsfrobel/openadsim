@@ -25,6 +25,7 @@ COPY gui.py \
      presets.py \
      utils.py \
      control.py \
+     watcher.py \
      start.sh \
      ./
 COPY assets ./assets

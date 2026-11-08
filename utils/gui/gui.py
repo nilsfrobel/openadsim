@@ -14,10 +14,16 @@ import streamlit as st
 from checks import validate_config
 from control import (
     docker_available,
+    get_teardown_commands,
     list_compose_containers,
     resolve_runtime_repo_root,
     run_process,
     run_processes,
+)
+from watcher import (
+    is_auto_stop_watcher_running,
+    start_auto_stop_watcher,
+    stop_auto_stop_watcher,
 )
 from models import SimulationConfig, UiField
 from presets import (
@@ -730,10 +736,10 @@ def _render_sidebar(config: SimulationConfig):
             return
 
         start_cmd = ["docker", "compose", "up", "-d"]
-        teardown_cmds = [
-            ["docker", "compose", "kill"],
-            ["docker", "compose", "rm", "--force"],
-        ]
+        teardown_cmds = get_teardown_commands(config.additional.record_bag)
+
+        if is_auto_stop_watcher_running():
+            st.info("Auto-stop watcher active: waiting for scenario completion...")
 
         start_disabled = not sidebar_validation.is_valid
         if st.button("Start", type="primary", disabled=start_disabled, use_container_width=True):
@@ -741,11 +747,14 @@ def _render_sidebar(config: SimulationConfig):
             normalized.write_env_file(ENV_FILE_PATH)
             st.session_state.config = normalized
             ok, output = run_process(start_cmd, cwd=REPO_ROOT)
+            if ok and normalized.additional.auto_stop:
+                start_auto_stop_watcher(REPO_ROOT, normalized.additional.record_bag)
             st.session_state.runtime_command_success = ok
             st.session_state.runtime_command_output = output
             st.rerun()
 
         if st.button("Stop", use_container_width=True):
+            stop_auto_stop_watcher()
             ok, output = run_processes(teardown_cmds, cwd=REPO_ROOT)
             st.session_state.runtime_command_success = ok
             st.session_state.runtime_command_output = output
